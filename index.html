@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Imagens Online</title>
+    <style>
+        /* Definindo o fundo escuro e a fonte */
+        body {
+            background-color: #2c2f38;
+            color: #f4f4f4;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            padding-top: 40px;
+            font-size: 2.5em;
+        }
+
+        p, label {
+            color: #d1d1d1;
+            font-size: 1.1em;
+        }
+
+        /* Estilo da área de arraste */
+        #dropZone {
+            width: 80%;
+            height: 200px;
+            border: 2px dashed #ddd;
+            text-align: center;
+            line-height: 200px;
+            margin: 20px auto;
+            background-color: #3a3f47;
+            color: #bbb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #dropZone:hover {
+            background-color: #555;
+        }
+
+        #preview {
+            margin-top: 20px;
+            max-width: 100%;
+            max-height: 400px;
+            display: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Estilos do seletor e botões */
+        select, button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* Título da pré-visualização */
+        h2 {
+            text-align: center;
+            color: #fff;
+            margin-top: 30px;
+            font-size: 1.5em;
+        }
+
+        /* Espaco do conteúdo */
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Conversor de Imagens Online</h1>
+
+        <p>Arraste ou cole uma imagem abaixo:</p>
+        <div id="dropZone">Arraste uma imagem ou cole uma aqui</div>
+
+        <br>
+
+        <label for="format">Escolha o formato:</label>
+        <select id="format">
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/webp">WEBP</option>
+            <option value="image/svg+xml">SVG</option>
+        </select>
+
+        <br><br>
+
+        <button onclick="removeBackground()" style="display: none;" id="removeBackgroundButton">Remover Fundo</button>
+        <button onclick="convertImage()" style="display: none;" id="convertButton">Converter e Baixar</button>
+
+        <br><br>
+
+        <h2>Pré-visualização:</h2>
+        <img id="preview" alt="Pré-visualização da imagem" />
+
+    </div>
+
+    <script>
+        let img = null;
+
+        // Função para carregar a imagem a partir da área de transferência ou arrastar
+        function handleImageInput(file) {
+            img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                img.src = e.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+
+            img.onload = function() {
+                // Exibe a imagem na área de pré-visualização
+                const preview = document.getElementById('preview');
+                preview.src = img.src;
+                preview.style.display = "block";
+
+                // Exibe os botões de remoção de fundo e conversão
+                document.getElementById('removeBackgroundButton').style.display = "inline-block";
+                document.getElementById('convertButton').style.display = "inline-block";
+            };
+
+            img.onerror = function() {
+                alert("Falha ao carregar a imagem.");
+            };
+        }
+
+        // Função para remover o fundo (transparente)
+        function removeBackground() {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+
+            // Loop para remover o fundo (considerando pixels com cor de fundo similar a branco ou preto)
+            for (let i = 0; i < pixels.length; i += 4) {
+                // Se for branco, tornamos transparente
+                if (pixels[i] > 200 && pixels[i + 1] > 200 && pixels[i + 2] > 200) {
+                    pixels[i + 3] = 0; // A transparência
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            img.src = canvas.toDataURL("image/png"); // Atualiza a imagem com fundo removido
+
+            // Atualiza a pré-visualização
+            const preview = document.getElementById('preview');
+            preview.src = img.src;
+        }
+
+        // Função para converter a imagem para o formato escolhido
+        function convertImage() {
+            const format = document.getElementById('format').value;
+
+            if (format === 'image/svg+xml') {
+                // Criar um SVG básico com a imagem dentro dele (não vetorializa, apenas encapsula)
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${img.width}" height="${img.height}">
+                                <image href="${img.src}" width="100%" height="100%" />
+                            </svg>`;
+
+                const blob = new Blob([svg], { type: 'image/svg+xml' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'imagem_convertida.svg';
+                link.click();
+            } else {
+                // Caso contrário, converta para o formato escolhido (PNG, JPEG, WEBP)
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob(function(blob) {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `imagem_convertida.${format.split('/')[1]}`;
+                    link.click();
+                }, format);
+            }
+        }
+
+        // Lida com a ação de arrastar e soltar
+        document.getElementById('dropZone').addEventListener('dragover', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('dropZone').style.backgroundColor = "#555";
+        });
+
+        document.getElementById('dropZone').addEventListener('dragleave', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('dropZone').style.backgroundColor = "#3a3f47";
+        });
+
+        document.getElementById('dropZone').addEventListener('drop', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('dropZone').style.backgroundColor = "#3a3f47";
+
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith("image/")) {
+                handleImageInput(file);
+            } else {
+                alert("Por favor, arraste uma imagem.");
+            }
+        });
+
+        // Lida com a ação de colar a imagem
+        document.addEventListener('paste', function(event) {
+            const items = event.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.startsWith("image/")) {
+                    const file = item.getAsFile();
+                    handleImageInput(file);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
